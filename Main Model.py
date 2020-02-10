@@ -59,7 +59,7 @@ class market(object):
         
         #Information Filters
         s.IFtype = IFtype
-        print('IF Type: '+str(s.IFtype))
+        print('SimID: NONE | P = '+str(s.A)+' | L = '+str(s.P)+' | IF Type: '+str(s.IFtype))
         
         s.IFref = {'None':s.search,                  #Used as search only (random search and limited testing)
                    'Cognitive':s.cognitive,          #Search (limit=3) among top recommendations by content-based
@@ -81,7 +81,7 @@ class market(object):
         
     def cognitive(s,a):
         #function to get a list of possible better recs
-        filtered = [1,2,3]
+        filtered = [1,2,3] #example of output for function
         a.search(s,pop=filtered)
     
     def sociological(s,a):
@@ -115,8 +115,6 @@ class Agent(object):
         s.id = id_
         s.activation = 0.5
         s.total_utility = 0
-        l = [0,0,1]
-        rd.shuffle(l)
         s.preference = [rd.randint(0,2) for i in range(100)]
         #after basic
         s.experience = {}
@@ -128,7 +126,6 @@ class Agent(object):
             pop = range(0,M.P)
         targets = rd.sample(pop,limit)
         tests = []
-        print(targets)
         for target_p in targets:
             if target_p not in s.consumed:
                 tests.append(s.test(M.productum[target_p].features))
@@ -136,12 +133,7 @@ class Agent(object):
             consume_p = targets[max(range(len(tests)), key=tests.__getitem__)]
             s.consume(consume_p,M.productum[consume_p].features,M)
 
-        
     def consume(s,movie_id,movie_value,M):
-        #if s.preference == movie_value:
-        #    s.utility = 1
-        #else:
-        #    s.utility = 0
         s.utility = s.evaluate(movie_value)
         s.experience[movie_id] = s.utility
         s.consumed.append(movie_id)
@@ -151,7 +143,7 @@ class Agent(object):
         return 1 - spatial.distance.cosine(s.preference,movie)
     
     def test(s,movie):
-        return dot(s.preference, movie)/(norm(s.preference)*norm(movie))
+        return dot(s.preference[:20], movie[:20])/(norm(s.preference[:20])*norm(movie[:20]))
     
     
 class Product(object):
@@ -165,10 +157,10 @@ class Product(object):
 
 sim_obj = []
        
-def Run(simtype,procnum,return_dict):
+def Run(P,L,simtype,procnum,return_dict):
     t0 = time.time()
     #takes 4 hours for 1 run
-    M = market(100,20,IFtype=simtype)
+    M = market(P,L,IFtype=simtype)
   #  M = market(270,40,IFtype=simtype)
     t1 = time.time()
     for i in range(50):
@@ -178,22 +170,33 @@ def Run(simtype,procnum,return_dict):
         M.step()
     t2 = time.time()
     print('Initialization time: '+str(t1-t0)+' secs.\nTotal time: '+str(t2-t1)+' secs.')
-    print('\nRatings : '+str(M.ratings_q))
+    #print('\nRatings : '+str(M.ratings_q))
+    
+    #get ratings raw values
+    return_dict[procnum] = [mov.ratings for mov in M.productum]
+    
     #M.P_df = M.P_df.sort_values(by='views',ascending=False)
-    #return_dict[procnum] = [M.P_df]
-    return M
+    return return_dict
+    
 
-def Plot_Run(MP_df):
-    plt.plot(list(MP_df.rating),linewidth=2,alpha=0.5,c='r',label='Rating')
+def Plot_Run(M_ratings):
+    df = pd.DataFrame(M)
+    df['views'] = [len(i) for i in df[1]]
+    df['rating'] = [np.mean(i) for i in df[1]]
+    gg = sns.jointplot(x='views',y='rating',data=df)
+    plt.show()
+    
+    df = df.sort_values(by='rating',ascending=False)
+    plt.plot(list(df.rating),linewidth=2,alpha=0.5,c='r',label='Rating')
     plt.legend()
     plt.show() 
-    plt.plot(list(MP_df.views),linewidth=2,alpha=0.5,c='b',label='Views')
+    plt.plot(list(df.views),linewidth=2,alpha=0.5,c='b',label='Views')
     plt.legend()
     plt.show()
-
+ 
     
 if __name__ == '__main__':
-    M = Run('Cognitive',1,{})
+    M = Run(50000,10000,'None',1,{})
     if 0 == 1:
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
