@@ -80,12 +80,15 @@ class market(object):
         a.search(s)
         
     def cognitive(s,a):
-        pass
+        #function to get a list of possible better recs
+        filtered = [1,2,3]
+        a.search(s,pop=filtered)
     
     def sociological(s,a):
         pass
     
-    def peers
+    def peers(s,a):
+        pass
 
     def top10(s,a):
         if len(s.top10) > 1:
@@ -124,16 +127,15 @@ class Agent(object):
         if pop == None:
             pop = range(0,M.P)
         targets = rd.sample(pop,limit)
-        print(targets)
         tests = []
+        print(targets)
         for target_p in targets:
             if target_p not in s.consumed:
-                tests.append(s.test(M.productum[target_p]))
-        consume_p = targets[max(xrange(len(tests)), key=values.__getitem__)]
-        print(tests)
-        print(consume_p)
-        print('\n')
-        s.consume(consume_p,M.productum[consume_p].features,M)
+                tests.append(s.test(M.productum[target_p].features))
+        if len(tests) > 0:
+            consume_p = targets[max(range(len(tests)), key=tests.__getitem__)]
+            s.consume(consume_p,M.productum[consume_p].features,M)
+
         
     def consume(s,movie_id,movie_value,M):
         #if s.preference == movie_value:
@@ -143,14 +145,7 @@ class Agent(object):
         s.utility = s.evaluate(movie_value)
         s.experience[movie_id] = s.utility
         s.consumed.append(movie_id)
-        M.productum[target_p].ratings.append(s.utility)
-        
-      #  market.ratings_q += 1
-      #  market.A_df.loc[s.id,'experience'][movie_id] = s.utility
-      #  market.A_df.loc[s.id,'total_utility'] += s.utility
-      #  market.A_df.loc[s.id,'consumed'].append(movie_id)
-      #  market.P_df.loc[movie_id,'rating'] += s.utility
-      #  market.P_df.loc[movie_id,'views'] += 1
+        M.productum[movie_id].ratings.append(s.utility)        
     
     def evaluate(s,movie):
         return 1 - spatial.distance.cosine(s.preference,movie)
@@ -198,7 +193,7 @@ def Plot_Run(MP_df):
 
     
 if __name__ == '__main__':
-    M = Run('None',1,{})
+    M = Run('Cognitive',1,{})
     if 0 == 1:
         manager = multiprocessing.Manager()
         return_dict = manager.dict()
