@@ -36,7 +36,7 @@ def plot_many(size,times,classes):
         
 ########################            ABModel Prototype
 class market(object):
-    def __init__(s,A_population,P_population,IFtype='None'):
+    def __init__(s,A_population,P_population,IFtype='None',run='NONE'):
         s.A,s.P = A_population,P_population
         s.ratings_q = 0
         
@@ -59,7 +59,7 @@ class market(object):
         
         #Information Filters
         s.IFtype = IFtype
-        print('SimID: NONE | P = '+str(s.A)+' | L = '+str(s.P)+' | IF Type: '+str(s.IFtype))
+        print('SimID: '+str(run)+' | P = '+str(s.A)+' | L = '+str(s.P)+' | IF Type: '+str(s.IFtype))
         
         s.IFref = {'None':s.search,                  #Used as search only (random search and limited testing)
                    'Cognitive':s.cognitive,          #Search (limit=3) among top recommendations by content-based
@@ -157,10 +157,10 @@ class Product(object):
 
 sim_obj = []
        
-def Run(P,L,simtype,procnum,return_dict):
+def Run(P,L,simtype,procnum,return_dict,run):
     t0 = time.time()
     #takes 4 hours for 1 run
-    M = market(P,L,IFtype=simtype)
+    M = market(P,L,IFtype=simtype,run=run)
   #  M = market(270,40,IFtype=simtype)
     t1 = time.time()
     for i in range(50):
@@ -190,32 +190,45 @@ def Plot_Run(M_ratings):
     plt.plot(list(df.rating),linewidth=2,alpha=0.5,c='r',label='Rating')
     plt.legend()
     plt.show() 
+    df = df.sort_values(by='views',ascending=False)
     plt.plot(list(df.views),linewidth=2,alpha=0.5,c='b',label='Views')
     plt.legend()
     plt.show()
  
     
+sim_settings = [[1000,200,'None',100], #values respectively: P, L, IFtype, number of experiments
+                [2000,400,'None',100],
+                [5000,1000,'None',100],
+                [10000,2000,'None',100],
+                [20000,4000,'None',100],
+                [40000,8000,'None',100]]   
+
 if __name__ == '__main__':
-    M = Run(50000,10000,'None',1,{})
-    if 0 == 1:
-        manager = multiprocessing.Manager()
-        return_dict = manager.dict()
-        #p = Pool(processes=4)
-        t=time.time()
-        processes = []
-        for i in range(0,6):
-            p = multiprocessing.Process(target=Run,args=('None',i,return_dict))
-            processes.append(p)
-            p.start()
+    #M = Run(2000,500,'None',1,{})
+    for setup in sim_settings:
+        sim_results = {}
+        Mp,Ml,Mif,runs = setup[0],setup[1],setup[2],setup[3]
+        while len(sim_results) < runs:    
+            manager = multiprocessing.Manager()
+            return_dict = manager.dict()
+            #p = Pool(processes=4)
+            t=time.time()
+            processes = []
+            for i in range(0,6):
+                p = multiprocessing.Process(target=Run,args=(Mp,Ml,Mif,i,return_dict,len(sim_results)))
+                processes.append(p)
+                p.start()
+                
+            for process in processes:
+                process.join()
             
-        for process in processes:
-            process.join()
-            
-        #print(p.map(Run('None'), [1,2,3,4]))
-        print(time.time()-t)
+            for vals in return_dict.values():
+                sim_results[len(sim_results)] = vals
+
+            print(time.time()-t)
         
-        more_dict = {}
-        t=time.time()
-        for i in range(0,6):
-            Run('None',i,more_dict)
-        print(time.time()-t)    
+        output = pd.DataFrame.from_dict(sim_results,orient='index')
+        output.to_pickle(str('C:\Simulations\\')+str(setup))
+        
+        
+        
