@@ -79,9 +79,14 @@ class market(object):
         
         #Initiate info filter mechanism
         if IFtype == 'Cognitive':
-            prod_feats = {prod.id:prod.features for prod in s.productum}
+            partial = int(len(s.productum[0].features)/2)
+            prod_feats = {prod.id:prod.features[:partial] for prod in s.productum} #only half of the features
             cs_predf = pd.DataFrame.from_dict(prod_feats,orient='index')
-            s.cs_df = cosine_similarity(cs_predf)
+            s.cs_df = pd.DataFrame(cosine_similarity(cs_predf))
+            s.cs = {}
+            for p in s.productum:
+                s.cs_df = s.cs_df.sort_values(by=p.id,ascending=False)
+                s.cs[p.id] = list(s.cs_df[p.id].index)[1:]
             s.recommended = {}
             s.recs,s.successrecs = 0,0
             print('Cosine Similarity matrix done!')
@@ -103,17 +108,16 @@ class market(object):
             for id_ in a.experience.keys():
                 if len(rec_list) >= 3:
                     break
-                s.cs_df = s.cs_df.sort_values(by=id_,ascending=False)
-                best_recs = list(s.cs_df[id_][:6].index[1:6])
+                best_recs = s.cs[id_][:10]
                 for recs in best_recs:
                     if recs not in a.consumed:
                         rec_list.append(recs)
         s.recs += 1   
         if len(rec_list) > 0:
             s.successrecs += 1
-            a.search(pop=rec_list)
+            a.search(s,pop=rec_list)
         else:
-            a.search()
+            a.search(s)
     
     def sociological(s,a):
         pass
@@ -204,7 +208,7 @@ def Run(P,L,simtype,procnum,return_dict,run):
     print('Initialization time: '+str(t1-t0)+' secs.\nTotal time: '+str(t2-t1)+' secs.')
     #print('\nRatings : '+str(M.ratings_q))
     if simtype == 'Cognitive':
-        print('Out of '+str(M.recs)+', '+str(M.successrecs)+' where successful. '+str(float(M.recs)/M.successrecs))
+        print('Out of '+str(M.recs)+', '+str(M.successrecs)+' where successful. '+str(float(M.successrecs)/M.recs))
     #get ratings raw values
     return_dict[procnum] = [mov.ratings for mov in M.productum]
     
@@ -229,20 +233,21 @@ def Plot_Run(M):
     plt.show()
  
     
-sim_settings = [[5000,1000,'Cognitive',100]]#, #values respectively: P, L, IFtype, number of experiments
+#sim_settings = [[5000,1000,'Cognitive',100]]#, #values respectively: P, L, IFtype, number of experiments
 '''               [2000,400,'None',100],
                 [5000,1000,'None',100],
                 [10000,2000,'None',100],
                 [20000,4000,'None',100],
                 [40000,8000,'None',100]]   '''
-#sim_settings = [[80000,16000,'None',100]]#,
+sim_settings = [[2000,400,'Cognitive',1]]#,
              #   [160000,32000,'None',100],
              #   [320000,64000,'None',100]
              #   ]
 
 if __name__ == '__main__':
-    #M = Run(2000,500,'None',1,{})
-    for setup in sim_settings:
+    M = Run(2000,500,'Cognitive',1,{},1)
+    if 0 == 1:
+     for setup in sim_settings:
         sim_results = {}
         Mp,Ml,Mif,runs = setup[0],setup[1],setup[2],setup[3]
         while len(sim_results) < runs:    
