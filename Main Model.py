@@ -229,8 +229,8 @@ def Plot_Run(M):
     plt.show()
  
     
-sim_settings = [[5000,1000,'None',100], #values respectively: P, L, IFtype, number of experiments
- '''               [2000,400,'None',100],
+sim_settings = [[5000,1000,'Cognitive',100]]#, #values respectively: P, L, IFtype, number of experiments
+'''               [2000,400,'None',100],
                 [5000,1000,'None',100],
                 [10000,2000,'None',100],
                 [20000,4000,'None',100],
