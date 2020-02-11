@@ -18,6 +18,15 @@ from numpy.linalg import norm
 from collections import Counter
 from multiprocessing import Pool
 import multiprocessing
+#For rec sys
+import nltk
+nltk.download('stopwords')
+import sklearn
+from nltk.corpus import stopwords
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import linear_kernel
+
 
 def evaluation(s,individual_pref,product_features):        
         normalized_feat = product_features # / np.linalg.norm(product_features)
@@ -68,21 +77,43 @@ class market(object):
         
         s.method = s.IFref[IFtype]
         
+        #Initiate info filter mechanism
+        if IFtype == 'Cognitive':
+            prod_feats = {prod.id:prod.features for prod in s.productum}
+            cs_predf = pd.DataFrame.from_dict(prod_feats,orient='index')
+            s.cs_df = cosine_similarity(cs_predf)
+            s.recommended = {}
+            s.recs,s.successrecs = 0,0
+            print('Cosine Similarity matrix done!')
+        
+        
     def step(s):
         #Every step the market activates ALL agents, they evaluate a single product and report the feedback.
         #For now, products utility is their value. MEaning that final aggregated 'evaluations' should be a gauss distro.
         for a in s.agente:            
             if a.activation < rd.random():  #Activation (50% prob.)
                 s.method(a)
-
                 
     def search(s,a):
         a.search(s)
-        
+    
     def cognitive(s,a):
-        #function to get a list of possible better recs
-        filtered = [1,2,3] #example of output for function
-        a.search(s,pop=filtered)
+        rec_list = []
+        if len(a.consumed) > 0:
+            for id_ in a.experience.keys():
+                if len(rec_list) >= 3:
+                    break
+                s.cs_df = s.cs_df.sort_values(by=id_,ascending=False)
+                best_recs = list(s.cs_df[id_][:6].index[1:6])
+                for recs in best_recs:
+                    if recs not in a.consumed:
+                        rec_list.append(recs)
+        s.recs += 1   
+        if len(rec_list) > 0:
+            s.successrecs += 1
+            a.search(pop=rec_list)
+        else:
+            a.search()
     
     def sociological(s,a):
         pass
@@ -136,6 +167,7 @@ class Agent(object):
     def consume(s,movie_id,movie_value,M):
         s.utility = s.evaluate(movie_value)
         s.experience[movie_id] = s.utility
+        s.experience = {k: v for k, v in sorted(s.experience.items(), key=lambda item: item[1],reverse=True)}
         s.consumed.append(movie_id)
         M.productum[movie_id].ratings.append(s.utility)        
     
@@ -171,7 +203,8 @@ def Run(P,L,simtype,procnum,return_dict,run):
     t2 = time.time()
     print('Initialization time: '+str(t1-t0)+' secs.\nTotal time: '+str(t2-t1)+' secs.')
     #print('\nRatings : '+str(M.ratings_q))
-    
+    if simtype == 'Cognitive':
+        print('Out of '+str(M.recs)+', '+str(M.successrecs)+' where successful. '+str(float(M.recs)/M.successrecs))
     #get ratings raw values
     return_dict[procnum] = [mov.ratings for mov in M.productum]
     
@@ -179,7 +212,7 @@ def Run(P,L,simtype,procnum,return_dict,run):
     return return_dict
     
 
-def Plot_Run(M_ratings):
+def Plot_Run(M):
     df = pd.DataFrame(M)
     df['views'] = [len(i) for i in df[1]]
     df['rating'] = [np.mean(i) for i in df[1]]
@@ -196,12 +229,16 @@ def Plot_Run(M_ratings):
     plt.show()
  
     
-sim_settings = [[1000,200,'None',100], #values respectively: P, L, IFtype, number of experiments
-                [2000,400,'None',100],
+sim_settings = [[5000,1000,'None',100], #values respectively: P, L, IFtype, number of experiments
+ '''               [2000,400,'None',100],
                 [5000,1000,'None',100],
                 [10000,2000,'None',100],
                 [20000,4000,'None',100],
-                [40000,8000,'None',100]]   
+                [40000,8000,'None',100]]   '''
+#sim_settings = [[80000,16000,'None',100]]#,
+             #   [160000,32000,'None',100],
+             #   [320000,64000,'None',100]
+             #   ]
 
 if __name__ == '__main__':
     #M = Run(2000,500,'None',1,{})
