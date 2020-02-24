@@ -79,7 +79,7 @@ class market(object):
         
         #Initiate info filter mechanism
         if IFtype == 'Cognitive':
-            partial = int(len(s.productum[0].features)/2)
+            partial = int(len(s.productum[0].features))
             prod_feats = {prod.id:prod.features[:partial] for prod in s.productum} #only half of the features
             cs_predf = pd.DataFrame.from_dict(prod_feats,orient='index')
             s.cs_df = pd.DataFrame(cosine_similarity(cs_predf))
@@ -91,6 +91,19 @@ class market(object):
             s.recs,s.successrecs = 0,0
             print('Cosine Similarity matrix done!')
         
+        elif IFtype == 'Sociological':
+            partial = int(len(s.agente[0].preference))
+            agente_prefs = {agent.id:agent.preference[:partial] for agent in s.agente} #only half of the features
+            cs_predf = pd.DataFrame.from_dict(agente_prefs,orient='index')
+            s.cs_df = pd.DataFrame(cosine_similarity(cs_predf))
+            s.cs = {}
+            for p in s.productum:
+                s.cs_df = s.cs_df.sort_values(by=p.id,ascending=False)
+                s.cs[p.id] = list(s.cs_df[p.id].index)[1:]
+            s.recommended = {}
+            s.recs,s.successrecs = 0,0
+            print('Cosine Similarity matrix done!')
+            
         
     def step(s):
         #Every step the market activates ALL agents, they evaluate a single product and report the feedback.
@@ -98,6 +111,8 @@ class market(object):
         for a in s.agente:            
             if a.activation < rd.random():  #Activation (50% prob.)
                 s.method(a)
+            if a.id == 1 or a.id == '1':
+                print(a.experience)
                 
     def search(s,a):
         a.search(s)
@@ -120,7 +135,22 @@ class market(object):
             a.search(s)
     
     def sociological(s,a):
-        pass
+        rec_list =[]
+        for id_ in s.cs[a.id][:50]: #picks top 50
+                if s.agente[id_].consumed > 0:
+                    for k,v in s.agente[id_].experience.items():
+                        if v > 0.5:
+                            pass
+                best_recs = s.cs[id_][:10]
+                for recs in best_recs:
+                    if recs not in a.consumed:
+                        rec_list.append(recs)
+        s.recs += 1   
+        if len(rec_list) > 0:
+            s.successrecs += 1
+            a.search(s,pop=rec_list)
+        else:
+            a.search(s)
     
     def peers(s,a):
         pass
@@ -217,9 +247,22 @@ def Run(P,L,simtype,procnum,return_dict,run):
     
 
 def Plot_Run(M):
-    df = pd.DataFrame(M)
-    df['views'] = [len(i) for i in df[1]]
-    df['rating'] = [np.mean(i) for i in df[1]]
+    # = pd.DataFrame(M)
+    df2 = M[M.columns[:-2]]
+    
+    views,rating_mean=[],[]
+    for i in df2.values:
+        raw_views = []
+        raw_rating_mean = []
+        for j in i:
+            raw_views.append(float(len(j)))
+            raw_rating_mean.append(np.mean(j))
+        views = views + raw_views
+        rating_mean = rating_mean + raw_rating_mean
+
+    df = pd.DataFrame()
+    df['views'] = [len(i) for i in df2.values[1]]#np.array(views)
+    df['rating'] = [np.mean(i) for i in df2.values[1]]#np.aray(rating_mean)
     gg = sns.jointplot(x='views',y='rating',data=df)
     plt.show()
     
@@ -233,19 +276,19 @@ def Plot_Run(M):
     plt.show()
  
     
-#sim_settings = [[5000,1000,'Cognitive',100]]#, #values respectively: P, L, IFtype, number of experiments
-'''               [2000,400,'None',100],
-                [5000,1000,'None',100],
-                [10000,2000,'None',100],
-                [20000,4000,'None',100],
-                [40000,8000,'None',100]]   '''
-sim_settings = [[2000,400,'Cognitive',1]]#,
+ #values respectively: P, L, IFtype, number of experiments
+sim_settings = [[2000,400,'Cognitive',100],
+                [5000,1000,'Cognitive',100],
+                [10000,2000,'Cognitive',100]]#,
+                #[20000,4000,'Cognitive',100],
+                #[40000,8000,'Cognitive',100]]   
+#sim_settings = [[80000,16000,'Cognitive',100]]#,
              #   [160000,32000,'None',100],
              #   [320000,64000,'None',100]
              #   ]
 
 if __name__ == '__main__':
-    M = Run(2000,500,'Cognitive',1,{},1)
+    M = Run(2000,500,'None',1,{},1)
     if 0 == 1:
      for setup in sim_settings:
         sim_results = {}
