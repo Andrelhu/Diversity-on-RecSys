@@ -97,7 +97,7 @@ class market(object):
             cs_predf = pd.DataFrame.from_dict(agente_prefs,orient='index')
             s.cs_df = pd.DataFrame(cosine_similarity(cs_predf))
             s.cs = {}
-            for p in s.productum:
+            for p in s.agente:
                 s.cs_df = s.cs_df.sort_values(by=p.id,ascending=False)
                 s.cs[p.id] = list(s.cs_df[p.id].index)[1:]
             s.recommended = {}
@@ -135,20 +135,22 @@ class market(object):
             a.search(s)
     
     def sociological(s,a):
-        rec_list =[]
+        rec_list = {k:0 for k in range(len(s.productum))}
         for id_ in s.cs[a.id][:50]: #picks top 50
-                if s.agente[id_].consumed > 0:
+                if len(s.agente[id_].consumed) > 0:
+                    t_recs = 0
                     for k,v in s.agente[id_].experience.items():
+                        if t_recs == 5:
+                            break           #max 5 best movies per agent
                         if v > 0.5:
-                            pass
-                best_recs = s.cs[id_][:10]
-                for recs in best_recs:
-                    if recs not in a.consumed:
-                        rec_list.append(recs)
+                            t_recs += 1
+                            rec_list[k] += 1
+        rec_list = {k: v for k, v in sorted(rec_list.items(), key=lambda item: item[1],reverse=True)}
+                
         s.recs += 1   
-        if len(rec_list) > 0:
+        if len(rec_list.keys()) > 0:
             s.successrecs += 1
-            a.search(s,pop=rec_list)
+            a.search(s,pop=list(rec_list.keys())[:10])
         else:
             a.search(s)
     
@@ -277,9 +279,9 @@ def Plot_Run(M):
  
     
  #values respectively: P, L, IFtype, number of experiments
-sim_settings = [[2000,400,'Cognitive',100],
-                [5000,1000,'Cognitive',100],
-                [10000,2000,'Cognitive',100]]#,
+sim_settings = [[2000,400,'Sociological',100],
+                [5000,1000,'Sociological',100],
+                [10000,2000,'Sociological',100]]#,
                 #[20000,4000,'Cognitive',100],
                 #[40000,8000,'Cognitive',100]]   
 #sim_settings = [[80000,16000,'Cognitive',100]]#,
@@ -288,8 +290,8 @@ sim_settings = [[2000,400,'Cognitive',100],
              #   ]
 
 if __name__ == '__main__':
-    M = Run(2000,500,'None',1,{},1)
-    if 0 == 1:
+    #M = Run(2000,500,'Sociological',1,{},1)
+    #if 0 == 1:
      for setup in sim_settings:
         sim_results = {}
         Mp,Ml,Mif,runs = setup[0],setup[1],setup[2],setup[3]
