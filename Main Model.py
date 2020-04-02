@@ -94,7 +94,7 @@ class market(object):
             print('Cosine Similarity matrix done!')
         
         elif IFtype == 'Sociological':
-            partial = int(len(s.agente[0].preference)/2  ) #       #DOING 50%    !!!!!!!!!!!!!!!!!!!
+            partial = int(len(s.agente[0].preference)  ) #       #DOING 100%    !!!!!!!!!!!!!!!!!!!
             agente_prefs = {agent.id:agent.preference[:partial] for agent in s.agente} 
             cs_predf = pd.DataFrame.from_dict(agente_prefs,orient='index')
             s.cs_df = pd.DataFrame(cosine_similarity(cs_predf))
@@ -311,10 +311,10 @@ def Plot_Run(M):
  
     
  #values respectively: P, L, IFtype, number of experiments
-sim_settings = [#[2000,400,'Sociological',100],
-                #[5000,1000,'Sociological',100],
-                #[10000,2000,'Sociological',100]]#,
-                [20000,4000,'Sociological',100]]#,
+sim_settings = [[2000,400,'Sociological',100],
+                [5000,1000,'Sociological',100],
+                [10000,2000,'Sociological',100]]#,
+                #[20000,4000,'Sociological',100]]#,
                 #[40000,8000,'None',99]]   
 #sim_settings = [[80000,16000,'Cognitive',100]]#,
              #   [160000,32000,'None',100],
