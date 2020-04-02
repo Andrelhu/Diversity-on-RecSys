@@ -73,13 +73,15 @@ class market(object):
         s.IFref = {'None':s.search,                  #Used as search only (random search and limited testing)
                    'Cognitive':s.cognitive,          #Search (limit=3) among top recommendations by content-based
                    'Sociological':s.sociological,    #Search (limit=3) among top recs by collaborative-filtering
+                   'Sociological_partial':s.sociological,
                    'Peers':s.peers}
         
         s.method = s.IFref[IFtype]
         
         #Initiate info filter mechanism
         if IFtype == 'Cognitive':
-            partial = int(len(s.productum[0].features))
+            partial = int(len(s.productum[0].features)/2)
+        
             prod_feats = {prod.id:prod.features[:partial] for prod in s.productum} #only half of the features
             cs_predf = pd.DataFrame.from_dict(prod_feats,orient='index')
             s.cs_df = pd.DataFrame(cosine_similarity(cs_predf))
@@ -92,8 +94,8 @@ class market(object):
             print('Cosine Similarity matrix done!')
         
         elif IFtype == 'Sociological':
-            partial = int(len(s.agente[0].preference))
-            agente_prefs = {agent.id:agent.preference[:partial] for agent in s.agente} #only half of the features
+            partial = int(len(s.agente[0].preference)/2  ) #       #DOING 50%    !!!!!!!!!!!!!!!!!!!
+            agente_prefs = {agent.id:agent.preference[:partial] for agent in s.agente} 
             cs_predf = pd.DataFrame.from_dict(agente_prefs,orient='index')
             s.cs_df = pd.DataFrame(cosine_similarity(cs_predf))
             s.cs = {}
@@ -105,15 +107,20 @@ class market(object):
             print('Cosine Similarity matrix done!')
             
         
-    def step(s):
+    def step(s,i):
         #Every step the market activates ALL agents, they evaluate a single product and report the feedback.
         #For now, products utility is their value. MEaning that final aggregated 'evaluations' should be a gauss distro.
+        if i in [50,60,70,80,90] and s.IFtype == 'Sociological_partial':
+            s.cf_partial() 
+        
         for a in s.agente:            
             if a.activation < rd.random():  #Activation (50% prob.)
-                s.method(a)
-            if a.id == 1 or a.id == '1':
-                print(a.experience)
-                
+                if i < 50:
+                    s.search(a)
+                else:
+                    s.method(a)
+            
+                    
     def search(s,a):
         a.search(s)
     
@@ -123,7 +130,9 @@ class market(object):
             for id_ in a.experience.keys():
                 if len(rec_list) >= 3:
                     break
-                best_recs = s.cs[id_][:10]
+                
+                
+                best_recs = s.cs[id_][:10]     
                 for recs in best_recs:
                     if recs not in a.consumed:
                         rec_list.append(recs)
@@ -154,9 +163,29 @@ class market(object):
         else:
             a.search(s)
     
-    def peers(s,a):
-        pass
+    def cf_partial(s):
+        consumed_d = {}
+        for agent in s.agente:
+            consumed = []
+            for p in s.productum:
+                if p.id in agent.consumed:
+                    consumed.append(1)
+                else:
+                    consumed.append(0)
+            consumed_d[agent.id] = consumed
+        cs_consumed = pd.DataFrame.from_dict(consumed_d,orient='index')
+        s.cs_df = pd.DataFrame(cosine_similarity(cs_consumed))
+        s.cs = {}
+        for p in s.agente: #get a df with recommendations for current similarity
+            s.cs_df = s.cs_df.sort_values(by=p.id,ascending=False)
+            s.cs[p.id] = list(s.cs_df[p.id].index)[1:]
+        s.recommended = {}
+        s.recs,s.successrecs = 0,0
+        print('Cosine Similarity matrix done for CF partial!')
 
+    def peers(s):
+        pass
+    
     def top10(s,a):
         if len(s.top10) > 1:
             rd.shuffle(s.top10)
@@ -191,6 +220,9 @@ class Agent(object):
         #Random
         if pop == None:
             pop = range(0,M.P)
+        if limit > len(pop):
+            limit = len(pop)
+            
         targets = rd.sample(pop,limit)
         tests = []
         for target_p in targets:
@@ -231,11 +263,11 @@ def Run(P,L,simtype,procnum,return_dict,run):
     M = market(P,L,IFtype=simtype,run=run)
   #  M = market(270,40,IFtype=simtype)
     t1 = time.time()
-    for i in range(50):
+    for i in range(200):
         if M.IFtype == 'top10' and i > 5:
             M.P_df = M.P_df.sort_values(by='rating',ascending=False)
             M.top10 = list(M.P_df.id)[:10]
-        M.step()
+        M.step(i)
     t2 = time.time()
     print('Initialization time: '+str(t1-t0)+' secs.\nTotal time: '+str(t2-t1)+' secs.')
     #print('\nRatings : '+str(M.ratings_q))
@@ -282,16 +314,16 @@ def Plot_Run(M):
 sim_settings = [[2000,400,'Sociological',100],
                 [5000,1000,'Sociological',100],
                 [10000,2000,'Sociological',100]]#,
-                #[20000,4000,'Cognitive',100],
-                #[40000,8000,'Cognitive',100]]   
+                #[20000,4000,'Sociological',100]]#,
+                #[40000,8000,'None',99]]   
 #sim_settings = [[80000,16000,'Cognitive',100]]#,
              #   [160000,32000,'None',100],
              #   [320000,64000,'None',100]
              #   ]
 
 if __name__ == '__main__':
-    #M = Run(2000,500,'Sociological',1,{},1)
-    #if 0 == 1:
+   # M = Run(2000,500,'Cognitive',1,{},1)
+   # if 0 == 1:
      for setup in sim_settings:
         sim_results = {}
         Mp,Ml,Mif,runs = setup[0],setup[1],setup[2],setup[3]
