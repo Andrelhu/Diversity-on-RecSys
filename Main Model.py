@@ -263,7 +263,7 @@ def Run(P,L,simtype,procnum,return_dict,run):
     M = market(P,L,IFtype=simtype,run=run)
   #  M = market(270,40,IFtype=simtype)
     t1 = time.time()
-    for i in range(200):
+    for i in range(100):
         if M.IFtype == 'top10' and i > 5:
             M.P_df = M.P_df.sort_values(by='rating',ascending=False)
             M.top10 = list(M.P_df.id)[:10]
@@ -311,10 +311,10 @@ def Plot_Run(M):
  
     
  #values respectively: P, L, IFtype, number of experiments
-sim_settings = [[2000,400,'Sociological',100],
-                [5000,1000,'Sociological',100],
-                [10000,2000,'Sociological',100]]#,
-                #[20000,4000,'Sociological',100]]#,
+sim_settings = [#[2000,400,'Sociological',100],
+                #[5000,1000,'Sociological',100],
+                #[10000,2000,'Sociological',100]]#,
+                [20000,4000,'Sociological',100]]#,
                 #[40000,8000,'None',99]]   
 #sim_settings = [[80000,16000,'Cognitive',100]]#,
              #   [160000,32000,'None',100],
