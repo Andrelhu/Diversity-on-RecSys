@@ -323,7 +323,7 @@ sim_settings = [[2000,400,'Sociological',100],
 
 if __name__ == '__main__':
    # M = Run(2000,500,'Cognitive',1,{},1)
-   # if 0 == 1:
+    if 0 == 1:
      for setup in sim_settings:
         sim_results = {}
         Mp,Ml,Mif,runs = setup[0],setup[1],setup[2],setup[3]
@@ -350,4 +350,72 @@ if __name__ == '__main__':
         output.to_pickle(str('C:\Simulations\\')+str(setup))
         
         
+def manual_clean(cogni='C3',prcnt=50):
+    sizes = [[2000,400],[5000,1000],[10000,2000]]
+    dff = pd.DataFrame()
+    for s in sizes:
+        df = pd.read_pickle("["+str(s[0])+", "+str(s[1])+", 'Sociological', 100]")
+        dft = load_basic2(df[df.index == 0],s[0],s[1],cogni)
+        for j in range(1,len(df)):
+            dft = dft.append(load_basic2(df[df.index == j],s[0],s[1],cogni))
+        dff = dff.append(dft)
+    dff.to_pickle('Results_FSociological_S100_C'+str(cogni)+'_P'+str(prcnt))
+    
+def load_basic2(df00,u,p,cogni):
+    df0 = get_basics(df00)
+    df0['u_size'] = [u]*len(df0)
+    df0['p_size'] = [p]*len(df0)
+    df0['filter'] = ['Sociological']*len(df0)
+    df0['u_cogni'] = [cogni]*len(df0)
+    df0['steps'] = ['100']*len(df0)
+    return df0
+
+def get_basics(df):
+    df2 = df#[M.columns[:-2]]\n"
+    viewstats = {'mean':[],'median':[],'std':[],'total':[],'minmax':[]}
+    ratingstats = {'mean':[],'median':[],'std':[],'total':[],'minmax':[]}
+
+    for i in df2.values:
+            raw_views = []
+            raw_rating_mean = []
+            for j in i:
+                raw_views.append(float(len(j)))
+                raw_rating_mean.append(np.mean(j))       #Mind we take totals for views and mean for ratings\n",
+            #Get mean, median, stdev, q1, q3, \n",
+            viewstats = update_stats(viewstats,raw_views)
+            ratingstats = update_stats(ratingstats,raw_rating_mean)
+            c,bins,gini = G(np.array(raw_views))
+            viewstats['gini'] = gini
+            c,bins,gini = G(np.array(raw_rating_mean))
+            ratingstats['gini'] = gini
+
+            dfv = pd.DataFrame()
+            for k in ['mean','median','std','total','minmax','gini']:
+                dfv['v_'+str(k)] = viewstats[str(k)]
+            for k in ['mean','median','std','total','minmax','gini']:
+                dfv['r_'+str(k)] = ratingstats[str(k)]
+
+            return dfv
         
+def update_stats(dct,raw_list):
+    dct['mean'].append(np.mean(raw_list))
+    dct['median'].append(np.median(raw_list))
+    dct['std'].append(np.std(raw_list))
+    dct['total'].append(len(raw_list))
+    dct['minmax'].append([min(raw_list),max(raw_list)])
+    return dct
+
+def G(v):
+    bins = np.linspace(0., 100., 11)
+    total = float(np.sum(v))
+    yvals = []
+    for b in bins:
+        bin_vals = v[v <= np.percentile(v, b)]
+        bin_fraction = (np.sum(bin_vals) / total) * 100.0
+        yvals.append(bin_fraction)
+    # perfect equality area\n",
+    pe_area = np.trapz(bins, x=bins)
+    # lorenz area\n",
+    lorenz_area = np.trapz(yvals, x=bins)
+    gini_val = (pe_area - lorenz_area) / float(pe_area)
+    return bins, yvals, gini_val
