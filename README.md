@@ -5,6 +5,13 @@
 ### Working paper -
 
 
+For access to the working paper please access [click here](https://www.researchgate.net/publication/340539715_Evaluating_Recommender_Systems_effect_on_Content_Diversity_An_ABM_framework_Working_Paper).
+
+
+This work has been accepted for presentation at the ["Complexity and Policy Studies 2020"](https://www.caps-conference.org/)
+conference this year. 
+
+
 ### Introduction - 
 Digital markets depend on information filters that make the massive flow of interaction manageable for suppliers, distributors, and consumers. Beyond this operational cornerstone, information filters also have a passive role on how markets organize and behave. The design of these filters has a significant role on who gets what, funneling consumers into few suppliers or promoting obscure products and services that can better satisfy consumer needs. The potential effect of recommendations appears to be larger on cultural or entertainment and media industries, where product’s uncertainty is usually high. As such, cultural diversity and market concentration on content platforms (e.g. Google News, YouTube, Spotify) are susceptible to the effect of recommendation systems algorithms. 
 
