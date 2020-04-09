@@ -5,7 +5,7 @@
 ### Working paper -
 
 
-For access to the working paper please access [click here](https://www.researchgate.net/publication/340539715_Evaluating_Recommender_Systems_effect_on_Content_Diversity_An_ABM_framework_Working_Paper).
+For access to the working paper please access [click here](https://www.academia.edu/s/d3a52c44aa).
 
 
 This work has been accepted for presentation at the ["Complexity and Policy Studies 2020"](https://www.caps-conference.org/)
@@ -42,7 +42,16 @@ Table 1.
 | Market        | User population      | Int   |[2,40]*     |    [2,5,10,20,40]*     |
 |               | Product space        | Int   |[0.4,8]*    |    [0.4,1,2,4,8]*      |
 |               | Filter type          | Str   |['None','Cognitive','Sociological']|   ['None','Cognitive','Sociological'] |
-*thousands
+| User          | Preferences          | List  |[i_1, ... , i_100], i in [0,1]|   list of binomial distribution |
+|               | Search capacity      | Int   |[3,30,60]   |    [3,30]             |     
+|               | Consumed products    | List  | Product space   |    []             |  
+| Product       | Features             | List  |[i_1, ... , i_100], i in [0,1]|   list of binomial distribution |
+|               | Ratings              | List  | [i_1, ... , i_n], i in [-1,1], n = User population   |    []             |
+|               | Purchases/Views      | Int   |[0,[   |    0             | 
+
+
+
+*thousands 
 
 
 #### Details
