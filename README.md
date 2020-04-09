@@ -63,4 +63,5 @@ The code is available [here](https://github.com/Andrelhu/Diversity-on-RecSys/Rec
 
 ### Results
 
+Early results show a clear impact of cognitive or content-based filters over the diversity of product sales. Meaning that the use of information filters results in a more unequal market. On average, a simulated market with content-based filtering would be expected to have a gini coefficient of  On simulations with cognitive n internal validation
 Data on the repository is available to [explore early results](https://github.com/Andrelhu/Diversity-on-RecSys/SimResults) of the simulations.
