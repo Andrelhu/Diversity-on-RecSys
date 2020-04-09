@@ -63,5 +63,9 @@ The code is available [here](https://github.com/Andrelhu/Diversity-on-RecSys/Rec
 
 ### Results
 
-Early results show a clear impact of cognitive or content-based filters over the diversity of product sales. Meaning that the use of information filters results in a more unequal market. On average, a simulated market with content-based filtering would be expected to have a gini coefficient of  On simulations with cognitive n internal validation
+Early results show a clear impact of cognitive or content-based filters over the diversity of product sales. Meaning that the use of information filters results in a more unequal market. On average, a simulated market with content-based filtering would be expected to have a gini coefficient of 0.68 if we consider that users have a high capacity to search (or a gini of 0.43 if they don't). On the other hand, search without any information filters produces a gini coefficient that ranges betwen 0.2 and 0.3. Figure 1 shows the distribution of the gini coefficient by filter type and user search capacity.
+
+![](https://raw.githubusercontent.com/Andrelhu/Diversity-on-RecSys/master/SimResults/Effects%20on%20Gini%20(Early%20results).png)
+
+
 Data on the repository is available to [explore early results](https://github.com/Andrelhu/Diversity-on-RecSys/SimResults) of the simulations.
