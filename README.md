@@ -67,5 +67,6 @@ Early results show a clear impact of cognitive or content-based filters over the
 
 ![](https://raw.githubusercontent.com/Andrelhu/Diversity-on-RecSys/master/SimResults/Effects%20on%20Gini%20(Early%20results).png)
 
+This result is consistent with our model of reference [(Fleder and Hosanagar, 2009)](https://pubsonline.informs.org/doi/abs/10.1287/mnsc.1080.0974). Thus, results provide an internal validation of the expected outputs among the equation-based and the agent-based simulations. As a consequence, the next step would be to develop further filters to analyze and evaluate their effect on the market diversity.
 
 Data on the repository is available to [explore early results](https://github.com/Andrelhu/Diversity-on-RecSys/SimResults) of the simulations.
