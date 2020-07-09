@@ -64,9 +64,10 @@ class market(object):
         
         #User/Item Dataset (Users in columns)
         s.dataset = pd.DataFrame()
+        s.recs = {}
         for userid in range(s.A):
             s.dataset[userid] = [0]*s.P
-        
+            s.recs[userid] = []
         
         #Initiate information filter mechanisms (e.g. cosine_similarity for Cognitive filtering)
         if IFtype == 'Cognitive':
@@ -162,15 +163,21 @@ class market(object):
     #Sociological or collaborative filtering with partial updates (work in progress)
     def pearson_collab_update(s):
         s.recommended = s.dataset.corr(method='pearson')
+        for a in s.agente:
+            recs_a = s.recommended[a.id]
+            recs_a = recs_a.sort_values(ascending=False)
+            recs = []
+            for user in list(recs_a.index[1:4]):
+                tdic = Counter(s.agente[user].experience)
+                recs = recs + [tdic.most_common(3)[j][0] for j in range(0,3)]
+            s.recs[a.id] = recs
+            print(s.recs[a.id])
 
     def pearson_collab(s,a):
-        recs_a = s.recommended[a.id]
-        recs_a = recs_a.sort_values(ascending=False)
-        recs = []
-        for user in list(recs_a.index[1:4]):
-            recs = recs + dict(sorted(s.agente[user].experience.items(), key=operator.itemgetter(1), reverse=True)[:4]).keys()
-        print(recs)
-        a.search(s)
+        if len(s.recs[a.id]) > 2:
+            a.search(s,pop=s.recs[a.id])
+        else:
+            a.search(s)
         
     def cf_partial(s):
         consumed_d = {}
@@ -242,7 +249,6 @@ class Agent(object):
             pop = range(0,M.P)
         if limit > len(pop):
             limit = len(pop)
-        print(pop)
         #Take a random sample from the pop by recommendation or random search
         targets = rd.sample(pop,limit)
         tests = []
@@ -330,8 +336,8 @@ sim_settings = [[2000,400,'Collaborative_User_PearsonR',100],
 
 #Multiprocessing with Python (set up number of parallel nodes)
 if __name__ == '__main__':
-    M = Run(200,50,'Collaborative_User_PearsonR',1,{},1)          #Remove comment and 
-    if 0 == 1:                                    # set if to True for multiprocessing simulations. 
+    #M = Run(200,50,'None',1,{},1)          #Remove comment and 
+    if 1 == 1:                                    # set if to True for multiprocessing simulations. 
      for setup in sim_settings:
         sim_results = {}
         Mp,Ml,Mif,runs = setup[0],setup[1],setup[2],setup[3]
@@ -367,7 +373,7 @@ if __name__ == '__main__':
 
 #Plot a single run output.
 def Plot_Run(M):
-    # = pd.DataFrame(M)
+    M = pd.DataFrame(M)
     df2 = M[M.columns[:-2]]
     
     views,rating_mean=[],[]
