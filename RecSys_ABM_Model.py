@@ -13,6 +13,7 @@ import re
 import seaborn as sns
 import time
 from scipy import spatial
+import scipy.stats
 from numpy import dot
 from numpy.linalg import norm
 from collections import Counter
@@ -57,8 +58,15 @@ class market(object):
                    'Cognitive':s.cognitive,          #Search (limit=3) among top recommendations by content-based
                    'Sociological':s.sociological,    #Search (limit=3) among top recs by collaborative-filtering
                    'Sociological_partial':s.sociological,
+                   'Collaborative_User_PearsonR':s.pearson_collab,
                    'Peers':s.peers}        
         s.method = s.IFref[IFtype]
+        
+        #User/Item Dataset (Users in columns)
+        s.dataset = pd.DataFrame()
+        for userid in range(s.A):
+            s.dataset[userid] = [0]*s.P
+        
         
         #Initiate information filter mechanisms (e.g. cosine_similarity for Cognitive filtering)
         if IFtype == 'Cognitive':
@@ -93,8 +101,8 @@ class market(object):
         #Every step the market activates some agents (50% approx), they evaluate a single product and report the feedback.
         
         #Special process for RecSys with Sociological_partial
-        if i in [50,60,70,80,90] and s.IFtype == 'Sociological_partial':
-            s.cf_partial() 
+        if i in [50,60,70,80,90,100,110,120,130,140] and s.IFtype == 'Collaborative_User_PearsonR':
+            s.pearson_collab_update() 
         
         #Main procedure of steps function: Go over every agent and activate
         for a in s.agente:            
@@ -152,6 +160,18 @@ class market(object):
             a.search(s)
     
     #Sociological or collaborative filtering with partial updates (work in progress)
+    def pearson_collab_update(s):
+        s.recommended = s.dataset.corr(method='pearson')
+
+    def pearson_collab(s,a):
+        recs_a = s.recommended[a.id]
+        recs_a = recs_a.sort_values(ascending=False)
+        recs = []
+        for user in list(recs_a.index[1:4]):
+            recs = recs + dict(sorted(s.agente[user].experience.items(), key=operator.itemgetter(1), reverse=True)[:4]).keys()
+        print(recs)
+        a.search(s)
+        
     def cf_partial(s):
         consumed_d = {}
         for agent in s.agente:
@@ -201,7 +221,6 @@ class market(object):
         return df
     
     
-    
 # 1.a.2 - the User agent - represent the behavior of a bounded rational individual searching for content consumption.
         
 class Agent(object):
@@ -223,8 +242,7 @@ class Agent(object):
             pop = range(0,M.P)
         if limit > len(pop):
             limit = len(pop)
-            
-            
+        print(pop)
         #Take a random sample from the pop by recommendation or random search
         targets = rd.sample(pop,limit)
         tests = []
@@ -243,6 +261,7 @@ class Agent(object):
         s.experience[movie_id] = s.utility
         s.experience = {k: v for k, v in sorted(s.experience.items(), key=lambda item: item[1],reverse=True)}
         s.consumed.append(movie_id)
+        M.dataset.at[s.id,movie_id] = s.utility
         M.productum[movie_id].ratings.append(s.utility)        # utility=rating is stored in the Market agent/environment
     
     #This returns a utility from the vector distance between their preferences and the product features
@@ -302,17 +321,17 @@ def evaluation(s,individual_pref,product_features):
 # Set the values for the different scenarios to be simulated.
     
 # Each case has [user population, product space size, filter type, number of simulations]
-sim_settings = [[2000,400,'Sociological',100],
-                [5000,1000,'Sociological',100],
-                [10000,2000,'Sociological',100]]#,
+sim_settings = [[2000,400,'Collaborative_User_PearsonR',100],
+                [5000,1000,'Collaborative_User_PearsonR',100],
+                [10000,2000,'Collaborative_User_PearsonR',100]]#,
                 #[20000,4000,'Cognitive',100]]#,
                 #[40000,8000,'Cognitive',100]]   
 
 
 #Multiprocessing with Python (set up number of parallel nodes)
 if __name__ == '__main__':
-   # M = Run(2000,500,'Cognitive',1,{},1)          #Remove comment and 
-     if 0 == 1:                                    # set if to True for multiprocessing simulations. 
+    M = Run(200,50,'Collaborative_User_PearsonR',1,{},1)          #Remove comment and 
+    if 0 == 1:                                    # set if to True for multiprocessing simulations. 
      for setup in sim_settings:
         sim_results = {}
         Mp,Ml,Mif,runs = setup[0],setup[1],setup[2],setup[3]
