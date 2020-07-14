@@ -28,7 +28,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.metrics.pairwise import linear_kernel
 
-
+global banana
+banana = []
         
 ############################
         
@@ -59,16 +60,25 @@ class market(object):
                    'Sociological':s.sociological,    #Search (limit=3) among top recs by collaborative-filtering
                    'Sociological_partial':s.sociological,
                    'Collaborative_User_PearsonR':s.pearson_collab,
+                   'Collaborative_Item_PearsonR':s.pearson_collab,
                    'Peers':s.peers}        
         s.method = s.IFref[IFtype]
         
         #User/Item Dataset (Users in columns)
-        s.dataset = pd.DataFrame()
-        s.recs = {}
-        for userid in range(s.A):
-            s.dataset[userid] = [0]*s.P
-            s.recs[userid] = []
+        if s.IFtype == 'Collaborative_User_PearsonR':
+            s.dataset = pd.DataFrame()
+            s.recs = {}
+            for userid in range(s.A):
+                s.dataset[userid] = [0.0]*s.P
+                s.recs[userid] = []
         
+        if s.IFtype == 'Collaborative_Item_PearsonR':
+            s.dataset = pd.DataFrame()
+            s.recs = {}
+            for itemid in range(s.P):
+                s.dataset[itemid] = [0.0]*s.A
+                s.recs[itemid] = []
+            
         #Initiate information filter mechanisms (e.g. cosine_similarity for Cognitive filtering)
         if IFtype == 'Cognitive':
             partial = int(len(s.productum[0].features)/2)
@@ -102,8 +112,11 @@ class market(object):
         #Every step the market activates some agents (50% approx), they evaluate a single product and report the feedback.
         
         #Special process for RecSys with Sociological_partial
-        if i in [50,60,70,80,90,100,110,120,130,140] and s.IFtype == 'Collaborative_User_PearsonR':
-            s.pearson_collab_update() 
+        if i in [50,60,70,80,90,100,110,120,130,140]:
+            if s.IFtype == 'Collaborative_User_PearsonR':
+                s.pearson_collab_update() 
+            if s.IFtype == 'Collaborative_Item_PearsonR':
+                s.pearson_item_collab_update()
         
         #Main procedure of steps function: Go over every agent and activate
         for a in s.agente:            
@@ -162,7 +175,7 @@ class market(object):
     
     #Sociological or collaborative filtering with partial updates (work in progress)
     def pearson_collab_update(s):
-        s.recommended = s.dataset.corr(method='pearson')
+        s.recommended = s.dataset.corr(method='pearson')    
         for a in s.agente:
             recs_a = s.recommended[a.id]
             recs_a = recs_a.sort_values(ascending=False)
@@ -172,6 +185,28 @@ class market(object):
                 recs = recs + [tdic.most_common(3)[j][0] for j in range(0,3)]
             s.recs[a.id] = recs
             print(s.recs[a.id])
+    
+    def pearson_item_collab_update(s):
+        global banana
+        s.recommended = s.dataset.corr(method='pearson')
+        banana = s.dataset
+        for a in s.agente:
+            tdic = Counter(a.experience)
+            top_items = [tdic.most_common(3)[j][0] for j in range(0,3)]
+            top_10_related = []
+            for i in top_items:
+                recs_a = s.recommended[i]
+                recs_a = recs_a.sort_values(ascending=False)
+                i_top = recs_a.index
+                included = 0
+                for ii in i_top:
+                    if included == 3:
+                        break
+                    if ii not in a.consumed: 
+                        top_10_related.append(ii)
+                        included += 1
+            s.recs[a.id] = top_10_related
+            
 
     def pearson_collab(s,a):
         if len(s.recs[a.id]) > 2:
@@ -227,6 +262,14 @@ class market(object):
         df[df.Object == id_] = obj_
         return df
     
+    def update_dataset(s,item_id,user_id,rating):
+        if s.IFtype == 'Collaborative_Item_PearsonR':
+            s.dataset.at[user_id,item_id] = float(rating)
+        else:
+            s.dataset.at[item_id,user_id] = rating
+        
+        s.productum[item_id].ratings.append(rating)        # utility=rating is stored in the Market agent/environment
+    
     
 # 1.a.2 - the User agent - represent the behavior of a bounded rational individual searching for content consumption.
         
@@ -267,8 +310,7 @@ class Agent(object):
         s.experience[movie_id] = s.utility
         s.experience = {k: v for k, v in sorted(s.experience.items(), key=lambda item: item[1],reverse=True)}
         s.consumed.append(movie_id)
-        M.dataset.at[s.id,movie_id] = s.utility
-        M.productum[movie_id].ratings.append(s.utility)        # utility=rating is stored in the Market agent/environment
+        M.update_dataset(movie_id,s.id,s.utility)        
     
     #This returns a utility from the vector distance between their preferences and the product features
     def evaluate(s,movie):
@@ -296,7 +338,7 @@ class Product(object):
 # 2. Support functions for the simulation.
         
 sim_obj = []
-       
+
 def Run(P,L,simtype,procnum,return_dict,run):
     t0 = time.time()
     M = market(P,L,IFtype=simtype,run=run)
@@ -311,7 +353,23 @@ def Run(P,L,simtype,procnum,return_dict,run):
     if simtype == 'Cognitive':
         print('Out of '+str(M.recs)+', '+str(M.successrecs)+' where successful. '+str(float(M.successrecs)/M.recs))
     return_dict[procnum] = [mov.ratings for mov in M.productum] #get ratings raw values
-    return return_dict      
+    return return_dict
+      
+def Run1(P,L,simtype,procnum,return_dict,run):
+    t0 = time.time()
+    M = market(P,L,IFtype=simtype,run=run)
+    t1 = time.time()
+    for i in range(100):
+        if M.IFtype == 'top10' and i > 5:
+            M.P_df = M.P_df.sort_values(by='rating',ascending=False)
+            M.top10 = list(M.P_df.id)[:10]
+        M.step(i)
+    t2 = time.time()
+    print('Initialization time: '+str(t1-t0)+' secs.\nTotal time: '+str(t2-t1)+' secs.')
+    if simtype == 'Cognitive':
+        print('Out of '+str(M.recs)+', '+str(M.successrecs)+' where successful. '+str(float(M.successrecs)/M.recs))
+    return_dict[procnum] = [mov.ratings for mov in M.productum] #get ratings raw values
+    return return_dict,M      
 
 def evaluation(s,individual_pref,product_features):        
         normalized_feat = product_features # / np.linalg.norm(product_features)
@@ -328,15 +386,15 @@ def evaluation(s,individual_pref,product_features):
     
 # Each case has [user population, product space size, filter type, number of simulations]
 sim_settings = [[2000,400,'Collaborative_User_PearsonR',100],
-                [5000,1000,'Collaborative_User_PearsonR',100],
-                [10000,2000,'Collaborative_User_PearsonR',100]]#,
+                [5000,1000,'Collaborative_User_PearsonR',50],
+                [10000,2000,'Collaborative_User_PearsonR',50]]#,
                 #[20000,4000,'Cognitive',100]]#,
                 #[40000,8000,'Cognitive',100]]   
 
 
 #Multiprocessing with Python (set up number of parallel nodes)
 if __name__ == '__main__':
-    #M = Run(200,50,'None',1,{},1)          #Remove comment and 
+    #Md,M = Run1(200,50,'Collaborative_Item_PearsonR',1,{},1)          #Remove comment and 
     if 1 == 1:                                    # set if to True for multiprocessing simulations. 
      for setup in sim_settings:
         sim_results = {}
@@ -361,7 +419,7 @@ if __name__ == '__main__':
             print(time.time()-t)
         
         output = pd.DataFrame.from_dict(sim_results,orient='index')
-        output.to_pickle(str('C:\Simulations\\')+str(setup))
+        output.to_pickle(str('D:\Simulations\\')+str(setup))
 
 
 
@@ -374,7 +432,7 @@ if __name__ == '__main__':
 #Plot a single run output.
 def Plot_Run(M):
     M = pd.DataFrame(M)
-    df2 = M[M.columns[:-2]]
+    df2 = M#[M.columns[:-2]]
     
     views,rating_mean=[],[]
     for i in df2.values:
