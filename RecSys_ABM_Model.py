@@ -65,6 +65,13 @@ class market(object):
         s.method = s.IFref[IFtype]
         
         #User/Item Dataset (Users in columns)
+        if s.IFtype == 'None':
+            s.dataset = pd.DataFrame()
+            s.recs = {}
+            for userid in range(s.A):
+                s.dataset[userid] = [0.0]*s.P
+                s.recs[userid] = []
+                
         if s.IFtype == 'Collaborative_User_PearsonR':
             s.dataset = pd.DataFrame()
             s.recs = {}
@@ -91,7 +98,7 @@ class market(object):
                 s.cs_df = s.cs_df.sort_values(by=p.id,ascending=False)
                 s.cs[p.id] = list(s.cs_df[p.id].index)[1:]
             s.recommended = {}
-            s.recs,s.successrecs = 0,0
+            s.recsq,s.successrecs = 0,0
             print('Cosine Similarity matrix done!')
         
         elif IFtype == 'Sociological':
@@ -104,7 +111,7 @@ class market(object):
                 s.cs_df = s.cs_df.sort_values(by=p.id,ascending=False)
                 s.cs[p.id] = list(s.cs_df[p.id].index)[1:]
             s.recommended = {}
-            s.recs,s.successrecs = 0,0
+            s.recsq,s.successrecs = 0,0
             print('Cosine Similarity matrix done!')
             
         
@@ -112,7 +119,7 @@ class market(object):
         #Every step the market activates some agents (50% approx), they evaluate a single product and report the feedback.
         
         #Special process for RecSys with Sociological_partial
-        if i in [50,60,70,80,90,100,110,120,130,140]:
+        if i in [50,55,60,65,70,75,80,85,90,95,100]:
             if s.IFtype == 'Collaborative_User_PearsonR':
                 s.pearson_collab_update() 
             if s.IFtype == 'Collaborative_Item_PearsonR':
@@ -145,7 +152,7 @@ class market(object):
                 for recs in best_recs:
                     if recs not in a.consumed:
                         rec_list.append(recs)
-        s.recs += 1   
+        s.recsq += 1   
         if len(rec_list) > 0:
             s.successrecs += 1
             a.search(s,pop=rec_list)
@@ -166,7 +173,7 @@ class market(object):
                             rec_list[k] += 1
         rec_list = {k: v for k, v in sorted(rec_list.items(), key=lambda item: item[1],reverse=True)}
                 
-        s.recs += 1   
+        s.recsq += 1   
         if len(rec_list.keys()) > 0:
             s.successrecs += 1
             a.search(s,pop=list(rec_list.keys())[:10])
@@ -180,9 +187,11 @@ class market(object):
             recs_a = s.recommended[a.id]
             recs_a = recs_a.sort_values(ascending=False)
             recs = []
-            for user in list(recs_a.index[1:4]):
+            for user in list(recs_a.index[1:5]):
                 tdic = Counter(s.agente[user].experience)
-                recs = recs + [tdic.most_common(3)[j][0] for j in range(0,3)]
+                recs = recs + [tdic.most_common(4)[j][0] for j in range(0,4)]
+            recs = list(set(recs))
+            recs = recs[:10]
             s.recs[a.id] = recs
             print(s.recs[a.id])
     
@@ -231,7 +240,7 @@ class market(object):
             s.cs_df = s.cs_df.sort_values(by=p.id,ascending=False)
             s.cs[p.id] = list(s.cs_df[p.id].index)[1:]
         s.recommended = {}
-        s.recs,s.successrecs = 0,0
+        s.recsq,s.successrecs = 0,0
         print('Cosine Similarity matrix done for CF partial!')
 
     #Future inclusion of peer or word of mouth processes every step.
@@ -285,7 +294,7 @@ class Agent(object):
 
     #The user agent always performs a search (with or without the Info Filter).
     #When there is an Info Filter the User agent will search among the recommendations of the filter.        
-    def search(s,M,pop=None,limit=3):
+    def search(s,M,pop=None,limit=30):
         #If pop (which is expected to be a list of products) is not given (i.e. there is no given recommendation)
         #then the user will take a maximum number of products randomly. This number is set by their search limit (default value = 3)
         if pop == None:
@@ -351,7 +360,7 @@ def Run(P,L,simtype,procnum,return_dict,run):
     t2 = time.time()
     print('Initialization time: '+str(t1-t0)+' secs.\nTotal time: '+str(t2-t1)+' secs.')
     if simtype == 'Cognitive':
-        print('Out of '+str(M.recs)+', '+str(M.successrecs)+' where successful. '+str(float(M.successrecs)/M.recs))
+        print('Out of '+str(M.recsq)+', '+str(M.successrecs)+' where successful. '+str(float(M.successrecs)/M.recsq))
     return_dict[procnum] = [mov.ratings for mov in M.productum] #get ratings raw values
     return return_dict
       
@@ -367,7 +376,7 @@ def Run1(P,L,simtype,procnum,return_dict,run):
     t2 = time.time()
     print('Initialization time: '+str(t1-t0)+' secs.\nTotal time: '+str(t2-t1)+' secs.')
     if simtype == 'Cognitive':
-        print('Out of '+str(M.recs)+', '+str(M.successrecs)+' where successful. '+str(float(M.successrecs)/M.recs))
+        print('Out of '+str(M.recsq)+', '+str(M.successrecs)+' where successful. '+str(float(M.successrecs)/M.recsq))
     return_dict[procnum] = [mov.ratings for mov in M.productum] #get ratings raw values
     return return_dict,M      
 
@@ -385,16 +394,16 @@ def evaluation(s,individual_pref,product_features):
 # Set the values for the different scenarios to be simulated.
     
 # Each case has [user population, product space size, filter type, number of simulations]
-sim_settings = [[2000,400,'Collaborative_User_PearsonR',100],
-                [5000,1000,'Collaborative_User_PearsonR',50],
-                [10000,2000,'Collaborative_User_PearsonR',50]]#,
+sim_settings = [[2000,400,'Collaborative_User_PearsonR',50]]#,
+                #[5000,1000,'None',50],
+                #[10000,2000,'None',50]]#,
                 #[20000,4000,'Cognitive',100]]#,
                 #[40000,8000,'Cognitive',100]]   
 
 
 #Multiprocessing with Python (set up number of parallel nodes)
 if __name__ == '__main__':
-    #Md,M = Run1(200,50,'Collaborative_Item_PearsonR',1,{},1)          #Remove comment and 
+    #Md,M = Run1(200,50,'None',1,{},1)          #Remove comment and 
     if 1 == 1:                                    # set if to True for multiprocessing simulations. 
      for setup in sim_settings:
         sim_results = {}
